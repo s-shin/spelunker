@@ -278,6 +278,14 @@ func (b Board) searchMovableForBlack(pos Position) map[Position]map[Piece]struct
 			{1, 0} /* .. */, {0, -1},
 			{1, 1}, {0, 1}, {-1, 1},
 		})
+		for mp := range movable {
+			bb := b.Clone()
+			bb.SafeRemove(pos)
+			bb[mp] = SideAndPiece{Side: Black, Piece: OU}
+			if bb.IsCheck(Black) {
+				delete(movable, mp)
+			}
+		}
 	}
 	return movable
 }
@@ -325,17 +333,22 @@ func (b Board) searchDroppableForBlack(piece Piece) map[Position]struct{} {
 						if sap2, ok := b[Position{x, y}]; ok {
 							if sap2.Piece == FU && sap2.Side == Black {
 								fuCols[x] = struct{}{}
+								break
 							}
 						}
 					}
 				}
 			}
-			if _, ok := fuCols[p.y]; ok {
+			if _, ok := fuCols[p.x]; ok {
 				continue
 			}
 			// check uchifuzume
 			if sap := b.Get(Position{p.x, p.y - 1}); sap == WOU {
-				// TODO: boardをcloneして駒を置いた上で詰み判定して詰みならcontinue
+				bb := b.Clone()
+				bb[p] = BFU
+				if bb.IsCheckmate(White) {
+					continue
+				}
 			}
 		case KY:
 			if p.y == 1 {
@@ -359,6 +372,34 @@ func (b Board) searchDroppableForWhite(piece Piece) map[Position]struct{} {
 	return droppable
 }
 
+// IsCheck judges OU of the side is check.
+func (b Board) IsCheck(side Side) bool {
+	ouPos := PositionNull
+	if ouPositions := b.Search(func(pos Position, sap SideAndPiece) bool {
+		return sap.Side == side && sap.Piece == OU
+	}); len(ouPositions) > 0 {
+		ouPos = ouPositions[0]
+	}
+	if ouPos == PositionNull {
+		panic("OU not found in " + side.String() + " side.")
+	}
+	isCheck := false
+	b.Each(func(pos Position, sap SideAndPiece) bool {
+		if sap.Side == side {
+			return true
+		}
+		movable := b.searchMovable(pos)
+		for p := range movable {
+			if p == ouPos {
+				isCheck = true
+				return false
+			}
+		}
+		return true
+	})
+	return isCheck
+}
+
 // IsCheckmate judges OU of the side is checkmate.
 func (b Board) IsCheckmate(side Side) bool {
 	ouPos := PositionNull
@@ -371,19 +412,10 @@ func (b Board) IsCheckmate(side Side) bool {
 		panic("OU not found in " + side.String() + " side.")
 	}
 	ouMovable := b.searchMovable(ouPos)
-	reverseSideMovable := make(map[Position]struct{})
-	b.Each(func(pos Position, sap SideAndPiece) bool {
-		if sap.Side != side {
-			return true
-		}
-		movable := b.searchMovable(pos)
-		for p := range movable {
-			reverseSideMovable[p] = struct{}{}
-		}
-		return true
-	})
 	for pos := range ouMovable {
-		if _, ok := reverseSideMovable[pos]; !ok {
+		bb := b.Clone()
+		bb[pos] = SideAndPiece{Side: side, Piece: OU}
+		if !bb.IsCheck(side) {
 			return false
 		}
 	}
