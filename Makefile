@@ -14,3 +14,6 @@ test:
 coverage:
 	go test -coverprofile=$(cover_out) $(pkg_shogi)
 	go tool cover -func=$(cover_out)
+
+test_parsec:
+	go test -v -cover github.com/s-shin/spelunker/parsec
