@@ -152,6 +152,16 @@ func MakePieceFromString(s string) Piece {
 	return PieceNull
 }
 
+// MakePieceFromJa creates a piece from the string of a piece in japanese.
+func MakePieceFromJa(s string) Piece {
+	for piece, pieceStrings := range pieceStringsMap {
+		if s == pieceStrings.Ja || s == pieceStrings.JaAbbr || s == pieceStrings.JaAlt {
+			return piece
+		}
+	}
+	return PieceNull
+}
+
 // CanPromote returns true if the piece can promote.
 func (p Piece) CanPromote() bool {
 	_, ok := promoteMap[p]

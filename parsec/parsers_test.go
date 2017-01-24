@@ -65,6 +65,16 @@ func ExampleOr() {
 	// Output: f
 }
 
+func ExampleOrWithIndex() {
+	r, err := OrWithIndex(Rune('a'), Rune('f')).Parse(NewInMemorySourceReader("foo"))
+	if err != nil {
+		panic(err)
+	}
+	v := r.Value().(OrResultValue)
+	fmt.Println(v.Index(), v.Value().(string))
+	// Output: 1 f
+}
+
 func ExampleMany() {
 	{
 		r, err := Many(Rune('a')).Parse(NewInMemorySourceReader("bcde"))
@@ -83,6 +93,26 @@ func ExampleMany() {
 	// Output:
 	// 0
 	// 5
+}
+
+func ExampleMaybe() {
+	{
+		r, err := Maybe(Rune('f')).Parse(NewInMemorySourceReader("foo"))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(r.IsNull(), r.Value().(string))
+	}
+	{
+		r, err := Maybe(Rune('o')).Parse(NewInMemorySourceReader("foo"))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(r.IsNull(), r.Value())
+	}
+	// Output:
+	// false f
+	// true <nil>
 }
 
 func ExampleMap() {
@@ -114,4 +144,31 @@ func ExampleLazy() {
 	}
 	fmt.Println(r.Value().(string))
 	// Output: foobar
+}
+
+func ExampleStr() {
+	r, err := Str("foo").Parse(NewInMemorySourceReader("foobar"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(r.Value().(string))
+	// Output: foo
+}
+
+func ExampleStrByAnd() {
+	r, err := StrByAnd(Rune('f'), Rune('o')).Parse(NewInMemorySourceReader("foobar"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(r.Value().(string))
+	// Output: fo
+}
+
+func ExampleStrByRuneIn() {
+	r, err := StrByRuneIn("fo", 2).Parse(NewInMemorySourceReader("foobar"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(r.Value().(string))
+	// Output: foo
 }

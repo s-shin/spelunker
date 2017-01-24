@@ -52,9 +52,9 @@ func (sap SideAndPiece) IsOnInvalidPosition(pos Position) bool {
 	}
 	switch sap.Piece {
 	case FU, KY:
-		return pos.y == 1
+		return pos.Y == 1
 	case KE:
-		return pos.y == 2
+		return pos.Y == 2
 	}
 	return false
 }

@@ -6,8 +6,8 @@ import (
 
 // Position represents a position on board.
 type Position struct {
-	x int
-	y int
+	X int
+	Y int
 }
 
 // Position constants.
@@ -116,35 +116,35 @@ func MakePositionFromString(s string) Position {
 
 // Reverse the position.
 func (pos Position) Reverse() Position {
-	return Position{BoardWidth - pos.x + 1, BoardHeight - pos.y + 1}
+	return Position{BoardWidth - pos.X + 1, BoardHeight - pos.Y + 1}
 }
 
 func (pos Position) String() string {
 	if pos == PositionNull {
 		return ""
 	}
-	return fmt.Sprintf("%d%d", pos.x, pos.y)
+	return fmt.Sprintf("%d%d", pos.X, pos.Y)
 }
 
 // IsOnBoard returns true if the position is inside board.
 func (pos Position) IsOnBoard() bool {
-	return pos.x >= 1 && pos.x <= BoardWidth && pos.y >= 1 && pos.y <= BoardHeight
+	return pos.X >= 1 && pos.X <= BoardWidth && pos.Y >= 1 && pos.Y <= BoardHeight
 }
 
 // IsInPromotionZone returns true if the position is in the promotion zone of the side.
 func (pos Position) IsInPromotionZone(side Side) bool {
 	switch side {
 	case Black:
-		return pos.y <= 3
+		return pos.Y <= 3
 	case White:
-		return pos.y >= 7
+		return pos.Y >= 7
 	}
 	panic("Invalid side: " + side.String())
 }
 
 // Offset returns the position moved with the offset.
 func (pos Position) Offset(left, down int) Position {
-	p := Position{pos.x + left, pos.y + down}
+	p := Position{pos.X + left, pos.Y + down}
 	if !p.IsOnBoard() {
 		return PositionNull
 	}

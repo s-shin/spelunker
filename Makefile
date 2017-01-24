@@ -17,3 +17,6 @@ coverage:
 
 test_parsec:
 	go test -v -cover github.com/s-shin/spelunker/parsec
+
+test_shogi_record_ki2:
+	go test -v -cover github.com/s-shin/spelunker/shogi/record/ki2

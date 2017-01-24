@@ -322,7 +322,7 @@ func (b Board) searchDroppableForBlack(piece Piece) map[Position]struct{} {
 	for _, p := range b.EmptyPositions() {
 		switch piece {
 		case FU:
-			if p.y == 1 {
+			if p.Y == 1 {
 				continue
 			}
 			// check nifu
@@ -339,11 +339,11 @@ func (b Board) searchDroppableForBlack(piece Piece) map[Position]struct{} {
 					}
 				}
 			}
-			if _, ok := fuCols[p.x]; ok {
+			if _, ok := fuCols[p.X]; ok {
 				continue
 			}
 			// check uchifuzume
-			if sap := b.Get(Position{p.x, p.y - 1}); sap == WOU {
+			if sap := b.Get(Position{p.X, p.Y - 1}); sap == WOU {
 				bb := b.Clone()
 				bb[p] = BFU
 				if bb.IsCheckmate(White) {
@@ -351,11 +351,11 @@ func (b Board) searchDroppableForBlack(piece Piece) map[Position]struct{} {
 				}
 			}
 		case KY:
-			if p.y == 1 {
+			if p.Y == 1 {
 				continue
 			}
 		case KE:
-			if p.y <= 2 {
+			if p.Y <= 2 {
 				continue
 			}
 		}
