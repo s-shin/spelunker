@@ -168,6 +168,11 @@ func (p Piece) CanPromote() bool {
 	return ok
 }
 
+// IsPromoted returns true if the piece is a promoted one.
+func (p Piece) IsPromoted() bool {
+	return p.Demote() != PieceNull
+}
+
 // Promote the piece.
 func (p Piece) Promote() Piece {
 	if p.CanPromote() {
@@ -188,8 +193,8 @@ func (p Piece) Demote() Piece {
 
 // ForceDemote forcely demotes the piece.
 func (p Piece) ForceDemote() Piece {
-	if p.CanPromote() {
-		return p
+	if p.IsPromoted() {
+		return p.Demote()
 	}
-	return p.Demote()
+	return p
 }

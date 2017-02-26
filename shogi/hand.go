@@ -11,8 +11,10 @@ func (hand Hand) String() string {
 		size += 2 * num
 	}
 	buf := make([]string, 0, size)
-	for piece := range hand {
-		buf = append(buf, "00", piece.String())
+	for piece, num := range hand {
+		for i := 0; i < num; i++ {
+			buf = append(buf, "00", piece.String())
+		}
 	}
 	return strings.Join(buf, "")
 }

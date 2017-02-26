@@ -3,6 +3,8 @@ package shogi
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // Board size constants.
@@ -19,16 +21,41 @@ func NewBoard() Board {
 	return make(Board)
 }
 
-// SafePut puts a piece to the board safely.
-func (b Board) SafePut(pos Position, sap SideAndPiece) {
+func NewBoardByTopLeftOrigin(saps []SideAndPiece) Board {
+	b := Board{}
+	for i, sap := range saps {
+		if sap != SideAndPieceNull {
+			pos := MakePositionByTopLeftOrigin(i%BoardWidth, i/BoardWidth)
+			b[pos] = sap
+		}
+	}
+	return b
+}
+
+func NewHirateBoard() Board {
+	return NewBoardByTopLeftOrigin([]SideAndPiece{
+		WKY, WKE, WGI, WKI, WOU, WKI, WGI, WKE, WKY,
+		SPN, WHI, SPN, SPN, SPN, SPN, SPN, WKA, SPN,
+		WFU, WFU, WFU, WFU, WFU, WFU, WFU, WFU, WFU,
+		SPN, SPN, SPN, SPN, SPN, SPN, SPN, SPN, SPN,
+		SPN, SPN, SPN, SPN, SPN, SPN, SPN, SPN, SPN,
+		SPN, SPN, SPN, SPN, SPN, SPN, SPN, SPN, SPN,
+		BFU, BFU, BFU, BFU, BFU, BFU, BFU, BFU, BFU,
+		SPN, BKA, SPN, SPN, SPN, SPN, SPN, BHI, SPN,
+		BKY, BKE, BGI, BKI, BOU, BKI, BGI, BKE, BKY,
+	})
+}
+
+// MustSet sets the sap at the pos on the board.
+func (b Board) MustSet(pos Position, sap SideAndPiece) {
 	if b.Has(pos) {
 		panic(fmt.Sprintf("%s must be empty.", pos.String()))
 	}
 	b[pos] = sap
 }
 
-// SafeRemove removes a piece from the board safely.
-func (b Board) SafeRemove(pos Position) {
+// MustRemove removes a piece from the board safely.
+func (b Board) MustRemove(pos Position) {
 	if !b.Has(pos) {
 		panic(fmt.Sprintf("%s must not be empty.", pos.String()))
 	}
@@ -118,52 +145,38 @@ func (b Board) Search(cond func(pos Position, sap SideAndPiece) bool) []Position
 	return results
 }
 
-// ApplyMove applies a move action.
-func (b Board) ApplyMove(m Move) (Piece, error) {
-	if !b.CanApplyMove(m) {
-		return PieceNull, NewMoveError(m)
+// ApplyMove applies a move action and returns a captured piece.
+func (b Board) ApplyMove(m *Move) (Piece, error) {
+	if err := b.VerifyMove(m); err != nil {
+		return PieceNull, err
 	}
 	if m.IsDrop() {
 		b[m.To] = m.SideAndPiece()
-	} else {
-		fromSap := b.Get(m.From)
-		toSap := b.Get(m.To)
-		if fromSap.Piece != m.Piece {
-			p := fromSap.Piece.Promote()
-			if p != m.Piece {
-				// FIXME: should return better error
-				return PieceNull, NewInvalidStateError("fromSap is not correspond to m")
-			}
-			fromSap.Piece = p
-		}
-		b[m.To] = fromSap
-		b.SafeRemove(m.From)
-		if toSap != SideAndPieceNull {
-			return toSap.Piece, nil
-		}
+		return PieceNull, nil
 	}
-	return PieceNull, nil
+	captured := b.Get(m.To).Piece
+	b[m.To] = SideAndPiece{
+		Side:  m.Side,
+		Piece: m.Piece,
+	}
+	b.MustRemove(m.From)
+	return captured, nil
 }
 
-// CanApplyMove returns true if the move can be applied.
-func (b Board) CanApplyMove(m Move) bool {
+// VerifyMove checks whether the move can be applied to this board.
+func (b Board) VerifyMove(m *Move) error {
 	if m.IsDrop() {
-		if b.Has(m.To) {
-			return false
+		moves := b.SearchDrops(m.SideAndPiece())
+		if _, ok := moves[*m]; !ok {
+			return errors.Errorf("%s cannot be dropped to %s.", m.Piece, m.To)
 		}
 	} else {
-		if !b.Has(m.From) {
-			return false
+		moves := b.SearchMoves(m.From)
+		if _, ok := moves[*m]; !ok {
+			return errors.Errorf("%s%s cannot be moved to %s.", m.From, m.Piece, m.To)
 		}
 	}
-	var moves map[Move]struct{}
-	if m.IsDrop() {
-		moves = b.SearchDrops(m.SideAndPiece())
-	} else {
-		moves = b.SearchMoves(m.From)
-	}
-	_, ok := moves[m]
-	return ok
+	return nil
 }
 
 // SearchMoves return available moves of the SideAndMove at the position.
@@ -280,7 +293,7 @@ func (b Board) searchMovableForBlack(pos Position) map[Position]map[Piece]struct
 		})
 		for mp := range movable {
 			bb := b.Clone()
-			bb.SafeRemove(pos)
+			bb.MustRemove(pos)
 			bb[mp] = SideAndPiece{Side: Black, Piece: OU}
 			if bb.IsCheck(Black) {
 				delete(movable, mp)

@@ -177,8 +177,8 @@ func TestBoardSearchDroppableForBlack(t *testing.T) {
 
 func TestBoardHas(t *testing.T) {
 	b := NewBoard()
-	b.SafePut(Position11, WKY)
-	b.SafePut(Position12, SPN)
+	b.MustSet(Position11, WKY)
+	b.MustSet(Position12, SPN)
 	if !b.Has(Position11) {
 		t.Errorf("The side and piece (%s) at Position11 should be WKY", b.Get(Position11))
 	}

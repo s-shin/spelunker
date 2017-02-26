@@ -47,6 +47,15 @@ func ExampleRuneNotIn() {
 	// Output: f
 }
 
+func ExampleRange() {
+	r, err := Range('a', 'z').Parse(NewInMemorySourceReader("foo"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(r.Value().(string))
+	// Output: f
+}
+
 func ExampleAnd() {
 	r, err := And(Rune('f'), Rune('o')).Parse(NewInMemorySourceReader("foo"))
 	if err != nil {
@@ -171,4 +180,31 @@ func ExampleStrByRuneIn() {
 	}
 	fmt.Println(r.Value().(string))
 	// Output: foo
+}
+
+func ExampleStrByManyNT() {
+	r, err := StrByManyNT(RuneIn("ab"), 0, ConstNil(Str("aaa"))).Parse(NewInMemorySourceReader("ababaaabbb"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(r.Value().(string))
+	// Output: abab
+}
+
+func ExampleConstNil() {
+	r, err := ConstNil(Str("foo")).Parse(NewInMemorySourceReader("foooo"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(r.Value())
+	// Output: <nil>
+}
+
+func ExampleConstStr() {
+	r, err := ConstStr(Str("foo"), "bar").Parse(NewInMemorySourceReader("foooo"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(r.Value().(string))
+	// Output: bar
 }

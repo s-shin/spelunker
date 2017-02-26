@@ -1,0 +1,126 @@
+syntax = "proto3";
+package shogi;
+
+message Player {
+  string name = 1;
+}
+
+enum Side {
+  BLACK = 0;
+  WHITE = 1;
+}
+
+message Record {
+  // Record format constructed by text data.
+  message WellKnown {
+    enum Type {
+      CSA = 0;
+      KI2 = 1;
+    }
+    Type type = 1;
+    bytes data = 2;
+  }
+
+  // Built-in record format.
+  message Builtin {
+    // TODO
+  }
+
+  oneof format {
+    Builtin builtin = 1;
+    WellKnown well_known = 2;
+  }
+}
+
+//---
+
+message HandshakeRequest {
+  uint32 version = 1;
+  string client_name = 2;
+}
+
+message HandshakeResult {}
+
+service ProtocolService {
+  rpc Handshake(HandshakeRequest) returns (HandshakeResult);
+}
+
+//---
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+  Player player = 3;
+}
+
+message LoginResponce {}
+
+message LogoutRequest {}
+
+message LogoutResponce {}
+
+service SessionService {
+  rpc Login(LoginRequest) returns (LoginResponce);
+  rpc Logout(LogoutRequest) returns (LogoutResponce);
+}
+
+//---
+
+message MatchRequest {
+  message Any {}
+  oneof condition {
+    Any any = 1;
+  }
+}
+
+message MatchResult {
+  uint32 match_id = 1;
+  Player other_side = 2;
+  Side your_side = 3;
+  Record setup = 4;
+}
+
+message AckRequest {
+  uint32 match_id = 1;
+  bool accept = 2;
+}
+
+message AckResult {
+  bool accepted = 1; // by other side.
+}
+
+service MatchService {
+  rpc Request(MatchRequest) returns (MatchResult);
+  rpc Ack(AckRequest) returns (AckResult);
+}
+
+//---
+
+message GameAction {
+  // TODO
+}
+
+message GameEvent {
+  // TODO
+}
+
+service GameService {
+  rpc Start(stream GameAction) returns (stream GameEvent);
+}
+
+//---
+
+message PingRequest {
+  // Current client's epoch milliseconds.
+  // Server may/can measure the network latency by this value.
+  uint64 epoch_ms = 1;
+}
+
+message PingResponce {
+  // Current server's epoch milliseconds.
+  uint64 epoch_ms = 1;
+}
+
+service PingService {
+  rpc Ping(stream PingRequest) returns (stream PingResponce);
+}

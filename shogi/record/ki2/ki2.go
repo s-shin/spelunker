@@ -68,7 +68,7 @@ func parse(r parsec.SourceReader) (*Ki2, error) {
 		parsec.ManyWithoutNil(
 			parsec.Or(
 				metaEntry,
-				parsec.ToNil(blankLine),
+				parsec.ConstNil(blankLine),
 			),
 		),
 		func(rs []parsec.ParseResult) (interface{}, error) {
@@ -96,7 +96,7 @@ func parse(r parsec.SourceReader) (*Ki2, error) {
 		parsec.ManyWithoutNil(
 			parsec.Or(
 				note,
-				parsec.ToNil(blankLine),
+				parsec.ConstNil(blankLine),
 			),
 		),
 		func(rs []parsec.ParseResult) (interface{}, error) {
@@ -182,7 +182,7 @@ func parse(r parsec.SourceReader) (*Ki2, error) {
 		parsec.ManyWithoutNil(
 			parsec.Or(
 				move,
-				parsec.ToNil(parsec.RuneIn(" \n")),
+				parsec.ConstNil(parsec.RuneIn(" \n")),
 			),
 		),
 		func(rs []parsec.ParseResult) (interface{}, error) {
@@ -228,4 +228,8 @@ func parse(r parsec.SourceReader) (*Ki2, error) {
 		return nil, err
 	}
 	return ret.Value().(*Ki2), nil
+}
+
+func ki2record(ki2 *Ki2) (*shogi.Record, error) {
+	return nil, nil
 }

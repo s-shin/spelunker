@@ -117,6 +117,47 @@ func Rune(c rune) Parser {
 
 //---
 
+type rangeParser struct {
+	begin, end rune
+	not        bool
+}
+
+func (p *rangeParser) String() string {
+	var not string
+	if p.not {
+		not = "Not"
+	}
+	return "Rune" + not + "Range(" + string(p.begin) + "-" + string(p.end) + ")"
+}
+
+func (p *rangeParser) Parse(r SourceReader) (ParseResult, error) {
+	txn := r.Transaction()
+	defer txn.Guard()
+	pos, err := r.CurrentPosition()
+	if err != nil {
+		return nil, NewParseErrorExpect(SourceRange{pos, pos}, p.String(), fmt.Sprintf("error (%s)", err.Error()))
+	}
+	c, err := r.Read()
+	if err != nil {
+		return nil, NewParseErrorExpect(SourceRange{pos, pos}, p.String(), fmt.Sprintf("error (%s)", err.Error()))
+	}
+	if (p.begin <= c && c <= p.end) == p.not {
+		return nil, NewParseErrorExpect(SourceRange{pos, pos}, p.String(), fmt.Sprintf("'%s'", string(c)))
+	}
+	txn.Commit()
+	return NewParseResult(SourceRange{pos, pos}, string(c)), nil
+}
+
+func Range(begin, end rune) Parser {
+	return &rangeParser{begin, end, false}
+}
+
+func NotRange(begin, end rune) Parser {
+	return &rangeParser{begin, end, true}
+}
+
+//---
+
 type andParser struct {
 	children []Parser
 }
@@ -235,7 +276,8 @@ type manyParser struct {
 	child Parser
 	min   int
 	// 0 means infinite.
-	max int
+	max       int
+	terminate Parser
 }
 
 func (p *manyParser) String() string {
@@ -256,6 +298,18 @@ func (p *manyParser) Parse(r SourceReader) (ParseResult, error) {
 			break
 		}
 		rs = append(rs, ret)
+
+		if p.terminate != nil {
+			r.Begin()
+			ret, err = p.terminate.Parse(r)
+			if err != nil {
+				r.Rollback()
+				continue
+			}
+			rs = append(rs, ret)
+			r.Commit()
+			break
+		}
 	}
 	if len(rs) < p.min {
 		return nil, NewParseErrorExpect(SourceRange{pos, pos}, p.String(), "no sufficient data to parse")
@@ -265,19 +319,27 @@ func (p *manyParser) Parse(r SourceReader) (ParseResult, error) {
 }
 
 func Many(p Parser) Parser {
-	return &manyParser{p, 0, 0}
+	return &manyParser{p, 0, 0, nil}
 }
 
 func Many1(p Parser) Parser {
-	return &manyParser{p, 1, 0}
+	return &manyParser{p, 1, 0, nil}
 }
 
 func ManyN(p Parser, n int) Parser {
-	return &manyParser{p, n, 0}
+	return &manyParser{p, n, 0, nil}
 }
 
 func ManyMinMax(p Parser, min, max int) Parser {
-	return &manyParser{p, min, max}
+	return &manyParser{p, min, max, nil}
+}
+
+func ManyNT(p Parser, n int, terminate Parser) Parser {
+	return &manyParser{p, n, 0, terminate}
+}
+
+func ManyMinMaxTerminate(p Parser, min, max int, terminate Parser) Parser {
+	return &manyParser{p, min, max, terminate}
 }
 
 //---
@@ -393,7 +455,7 @@ func FilterNil(p Parser) Parser {
 
 // ConcatStr converts the result values to one concatenated string.
 func ConcatStr(p Parser) Parser {
-	return Map(p, func(r ParseResult) (ParseResult, error) {
+	return Map(FilterNil(p), func(r ParseResult) (ParseResult, error) {
 		if results, ok := r.Value().([]ParseResult); ok {
 			var str string
 			for _, result := range results {
@@ -403,9 +465,6 @@ func ConcatStr(p Parser) Parser {
 					return nil, NewParseError(result.SourceRange(), "not string")
 				}
 			}
-			return NewParseResult(r.SourceRange(), str), nil
-		}
-		if str, ok := r.Value().(string); ok {
 			return NewParseResult(r.SourceRange(), str), nil
 		}
 		return nil, NewParseError(r.SourceRange(), "failed to concat strings")
@@ -433,6 +492,14 @@ func StrByRuneNotIn(s string, minLen int) Parser {
 	return ConcatStr(ManyN(RuneNotIn(s), minLen))
 }
 
+func StrByManyN(p Parser, n int) Parser {
+	return ConcatStr(ManyN(p, n))
+}
+
+func StrByManyNT(p Parser, n int, terminate Parser) Parser {
+	return ConcatStr(ManyNT(p, n, terminate))
+}
+
 func Digit() Parser {
 	return RuneIn("0123456789")
 }
@@ -456,10 +523,17 @@ func ToInt(p Parser) Parser {
 	})
 }
 
-// ToNil sets nil as the result value.
-func ToNil(p Parser) Parser {
+// ConstNil sets nil as the result value.
+func ConstNil(p Parser) Parser {
 	return Map(p, func(r ParseResult) (ParseResult, error) {
 		return NewParseResult(r.SourceRange(), nil), nil
+	})
+}
+
+// ConstNil sets the string as the result value.
+func ConstStr(p Parser, s string) Parser {
+	return Map(p, func(r ParseResult) (ParseResult, error) {
+		return NewParseResult(r.SourceRange(), s), nil
 	})
 }
 

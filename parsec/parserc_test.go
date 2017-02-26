@@ -125,10 +125,10 @@ func TestParsecSampleLang(t *testing.T) {
 	var calc, calc1, calc2 Parser
 
 	wsc = RuneIn(" \n")
-	ws = ToNil(Many(wsc))
-	ws1 = ToNil(Many1(wsc))
+	ws = ConstNil(Many(wsc))
+	ws1 = ConstNil(Many1(wsc))
 
-	terminate = ToNil(Rune(';'))
+	terminate = ConstNil(Rune(';'))
 
 	num = Map(
 		ToInt(Digits()),
